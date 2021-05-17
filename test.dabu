@@ -2,7 +2,7 @@ Singleton Player Extends Sprite
   Prop name
 
   Func init(n)
-    Super(10, 10, "player.png") # Call Sprite's init()
+    Super(10, 10, "player.png")
     name = n
   End
 
@@ -20,7 +20,7 @@ End
 GlobalVar = 10
 
 For (A = 0, A < GlobalVar, A++)
-  # Do saink
+
 End
 
 Player.hello()
