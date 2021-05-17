@@ -1,0 +1,27 @@
+Singleton Player Extends Sprite
+  Prop name
+
+  Func init(n)
+    Super(10, 10, "player.png") # Call Sprite's init()
+    name = n
+  End
+
+  Func hello(a)
+    If a == b
+      G = [[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]]
+      A = G(0, 2, 0)
+      Return A
+    Else
+      Return 10
+    End
+  End
+End
+
+GlobalVar = 10
+
+For (A = 0, A < GlobalVar, A++)
+  # Do saink
+End
+
+Player.hello()
+Player.name
