@@ -18,22 +18,22 @@ func lex(script []byte) (tokens []Token) {
 		}
 
 		if match := numberRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_NUMBER, match})
+			tokens = append(tokens, Token{TOKEN_NUMBER, string(match)})
 			script = script[len(match):]
 		} else if match := identifierRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_IDENTIFIER, match})
+			tokens = append(tokens, Token{TOKEN_IDENTIFIER, string(match)})
 			script = script[len(match):]
 		} else if match := bracketRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_BRACKET, match})
+			tokens = append(tokens, Token{TOKEN_BRACKET, string(match)})
 			script = script[1:]
 		} else if match := stringLiteralRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_STRINGLITERAL, match})
+			tokens = append(tokens, Token{TOKEN_STRINGLITERAL, string(match)})
 			script = script[len(match):]
 		} else if match := separatorRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_SEPARATOR, match})
+			tokens = append(tokens, Token{TOKEN_SEPARATOR, string(match)})
 			script = script[len(match):]
 		} else if match := operatorRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_OPERATOR, match})
+			tokens = append(tokens, Token{TOKEN_OPERATOR, string(match)})
 			script = script[len(match):]
 		} else {
 			panic("Unknown token")
@@ -75,5 +75,5 @@ const (
 
 type Token struct {
 	tokenType int
-	value     []byte
+	value     string
 }
