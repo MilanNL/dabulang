@@ -12,7 +12,7 @@ In addition to TI-BASIC, Dabulang has classes, functions, singletons and a synta
 
 ```Dabulang
 Singleton Player Extends Sprite
-  Prop name = "", age;
+  Prop name, age;
 
   Func init()
     Super(10, 10, "player.png");

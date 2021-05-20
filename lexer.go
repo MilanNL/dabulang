@@ -10,8 +10,8 @@ func lex(script []byte) (tokens []Token) {
 	identifierRegex := regexp.MustCompile(`^[a-zA-Z][a-zA-Z_0-9]*`)
 	bracketRegex := regexp.MustCompile(`^[()\[\]{}]`)
 	stringLiteralRegex := regexp.MustCompile(`^".*"`)
-	separatorRegex := regexp.MustCompile(`^[.,]`)
-	operatorRegex := regexp.MustCompile(`^(==|!=|>=|<=|>|<|=|\+|/|\*|-|\+\+|--|&|&&|\||\|\||<<|>>|!|\^|\^\^|~)`)
+	separatorRegex := regexp.MustCompile(`^[,;]`)
+	operatorRegex := regexp.MustCompile(`^(\.|==|!=|>=|<=|>|<|=|\+|/|\*|-|\+\+|--|&|&&|\||\|\||<<|>>|!|\^|\^\^|~)`)
 	for len(script) > 0 {
 		for iswhitespace(script[0]) {
 			script = script[1:]
