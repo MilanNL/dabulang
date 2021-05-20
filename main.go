@@ -12,7 +12,8 @@ func main() {
 	}
 
 	_, nodes := parse(lex(script))
+	variables = make(map[string]interface{})
 	for _, n := range nodes {
-		fmt.Print(n)
+		fmt.Printf("%v\n", n.evaluate())
 	}
 }

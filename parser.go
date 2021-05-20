@@ -159,6 +159,7 @@ func parse(tokens []Token) (count int, nodes []Node) {
 			// This is an expression
 			savedIndex := i
 			hasOperator := false
+			minLevel := 1000
 			level := 0
 			for ; i < len(tokens) && tokens[i].value != ";"; i++ {
 				if tokens[i].value == "(" || tokens[i].value == "[" {
@@ -167,30 +168,39 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				if tokens[i].value == ")" || tokens[i].value == "]" {
 					level--
 				}
-				if tokens[i].tokenType == TOKEN_OPERATOR && level == 0 {
+				if tokens[i].tokenType == TOKEN_OPERATOR {
 					hasOperator = true
+					if minLevel > level {
+						minLevel = level
+					}
 				}
 			}
 			i = savedIndex
 			if hasOperator {
 				// Resolve expression
 				savedIndex := i
+				level := 0
 			presendenceLoop:
 				for _, o := range operators {
-					for ; tokens[i].value != ";"; i++ {
-						if tokens[i].value == o {
-							_, LHS := parse(tokens[savedIndex:i])
+					for ; i < len(tokens) && tokens[i].value != ";"; i++ {
+						if tokens[i].value == "(" || tokens[i].value == "[" {
+							level++
+						} else if tokens[i].value == ")" || tokens[i].value == "]" {
+							level--
+						} else if tokens[i].value == o && level == minLevel {
+							_, LHS := parse(tokens[savedIndex+minLevel : i])
 							savedIndex = i
-							for tokens[i].value != ";" {
+							for i < len(tokens) && tokens[i].value != ";" {
 								i++
 							}
-							_, RHS := parse(tokens[savedIndex+1 : i+1])
+							_, RHS := parse(tokens[savedIndex+1 : i-minLevel])
 							nodes = append(nodes, BinopNode{o, LHS[0], RHS[0]})
 							count++
 							break presendenceLoop
 						}
 					}
 					i = savedIndex
+					level = 0
 				}
 
 			} else {
@@ -242,34 +252,39 @@ func parse(tokens []Token) (count int, nodes []Node) {
 					i += 2
 					var args []Node
 					level := 0
-					for {
-						var elementTokens []Token
+					if tokens[i].value != ")" {
 						for {
-							if tokens[i].value == "(" {
-								level++
-							}
-							if tokens[i].value == ")" {
-								level--
-							}
+							var elementTokens []Token
+							for {
+								if tokens[i].value == "(" {
+									level++
+								}
+								if tokens[i].value == ")" {
+									level--
+								}
 
-							if (tokens[i].value == ")" && level < 0) ||
-								(tokens[i].value == "," && level == 0) {
+								if (tokens[i].value == ")" && level < 0) ||
+									(tokens[i].value == "," && level == 0) {
+									break
+								}
+
+								elementTokens = append(elementTokens, tokens[i])
+								i++
+							}
+							elementTokens = append(elementTokens, Token{TOKEN_SEPARATOR, ";"})
+							_, arg := parse(elementTokens)
+							args = append(args, arg[0])
+							if tokens[i].value == ")" && level < 0 {
 								break
 							}
-
-							elementTokens = append(elementTokens, tokens[i])
 							i++
 						}
-						elementTokens = append(elementTokens, Token{TOKEN_SEPARATOR, ";"})
-						_, arg := parse(elementTokens)
-						args = append(args, arg[0])
-						if tokens[i].value == ")" && level < 0 {
-							break
-						}
-						i++
+						nodes = append(nodes, FunctionCallNode{name, args})
+						count++
+					} else {
+						nodes = append(nodes, FunctionCallNode{name, nil})
+						count++
 					}
-					nodes = append(nodes, FunctionCallNode{name, args})
-					count++
 				} else if tokens[i].tokenType == TOKEN_IDENTIFIER {
 					nodes = append(nodes, IdentifierNode{tokens[i].value})
 					count++
@@ -299,7 +314,7 @@ func takeUntilEnd(tokens []Token, output *[]Token, i *int) {
 	}
 }
 
-var operators = [...]string{"=", "||", "&&", "|", "&", "==", "!=", ">", ">=", "<", "<=", "<<", ">>", "+", "-", "*", "/", "!", "~", "."}
+var operators = [...]string{"=", "||", "&&", "|", "&", "^", "==", "!=", ">", ">=", "<", "<=", "<<", ">>", "+", "-", "*", "/", "!", "~", "."}
 var keywords = [...]string{"If", "While", "Class", "End", "Singleton", "For", "Func", "Return", "Else", "Extends", "Prop"}
 
 func isKeyword(identifier string) bool {

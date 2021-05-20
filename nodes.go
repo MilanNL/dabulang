@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	NODE_IF            = iota
@@ -20,6 +22,7 @@ const (
 
 type Node interface {
 	getType() int
+	evaluate() interface{}
 	String() string
 }
 
@@ -109,7 +112,7 @@ func (n IdentifierNode) getType() int {
 	return NODE_IDENTIFIER
 }
 func (n IdentifierNode) String() string {
-	return fmt.Sprintf("Identifier node: {\n name: %s\n}\n", n.name)
+	return n.name
 }
 
 type NumberNode struct {
@@ -169,7 +172,7 @@ func (n FunctionCallNode) getType() int {
 	return NODE_FUNCTIONCALL
 }
 func (n FunctionCallNode) String() string {
-	return fmt.Sprintf("Function call node: {\n name: %s,\n args: %s\n}\n", n.name, n.args)
+	return n.name
 }
 
 type StringLiteralNode struct {
@@ -180,5 +183,5 @@ func (n StringLiteralNode) getType() int {
 	return NODE_STRINGLITERAL
 }
 func (n StringLiteralNode) String() string {
-	return fmt.Sprintf("String literal node: {\n literal: %s\n}\n", n.literal)
+	return n.literal
 }
