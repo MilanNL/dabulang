@@ -22,7 +22,7 @@ const (
 
 type Node interface {
 	getType() int
-	evaluate() interface{}
+	evaluate(scope *Scope) interface{}
 	String() string
 }
 
@@ -81,7 +81,7 @@ func (n ClassNode) String() string {
 }
 
 type ReturnNode struct {
-	expression []Node
+	expression Node
 }
 
 func (n ReturnNode) getType() int {

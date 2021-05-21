@@ -1,7 +1,11 @@
-Func Test()
-  For(i = 10; i > 0; i = i - 1)
-    i;
+Func min(a, b)
+  If a < b Then
+    Return a;
+  Else
+    Return b;
   End
 End
 
-Test();
+a = 10;
+b = 20;
+print(min(a, b));

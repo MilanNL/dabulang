@@ -53,7 +53,9 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				i += 2                  // TODO: Assert the next token is an opening bracket
 				var params []string
 				for ; tokens[i].value != ")"; i++ {
-					params = append(params, tokens[i].value)
+					if tokens[i].value != "," { // FIXME
+						params = append(params, tokens[i].value)
+					}
 				}
 				i++
 				var bodyTokens []Token
@@ -152,7 +154,7 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				}
 				i++
 				_, expression := parse(expressionTokens)
-				nodes = append(nodes, ReturnNode{expression})
+				nodes = append(nodes, ReturnNode{expression[0]})
 				count++
 			}
 		} else {
