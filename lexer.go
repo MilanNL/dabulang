@@ -6,10 +6,10 @@ import (
 )
 
 func lex(script []byte) (tokens []Token) {
-	numberRegex := regexp.MustCompile(`^[0-9]+`)
-	identifierRegex := regexp.MustCompile(`^[a-zA-Z][a-zA-Z_0-9]*`)
+	numberRegex := regexp.MustCompile(`^[-]{0,1}[0-9.]+`)
+	identifierRegex := regexp.MustCompile(`^[\D][^ ()[\]"=!></\*&\|\^~,;\n]*`)
 	bracketRegex := regexp.MustCompile(`^[()\[\]{}]`)
-	stringLiteralRegex := regexp.MustCompile(`^".*"`)
+	stringLiteralRegex := regexp.MustCompile(`(?ms)^".*?"`)
 	separatorRegex := regexp.MustCompile(`^[,;]`)
 	operatorRegex := regexp.MustCompile(`^(\.|==|!=|>=|<=|>|<|=|\+|/|\*|-|\+\+|--|&&|&|\|\||\||<<|>>|!|\^|~)`)
 	for len(script) > 0 {
@@ -19,9 +19,6 @@ func lex(script []byte) (tokens []Token) {
 
 		if match := numberRegex.Find(script); match != nil {
 			tokens = append(tokens, Token{TOKEN_NUMBER, string(match)})
-			script = script[len(match):]
-		} else if match := identifierRegex.Find(script); match != nil {
-			tokens = append(tokens, Token{TOKEN_IDENTIFIER, string(match)})
 			script = script[len(match):]
 		} else if match := bracketRegex.Find(script); match != nil {
 			tokens = append(tokens, Token{TOKEN_BRACKET, string(match)})
@@ -34,6 +31,9 @@ func lex(script []byte) (tokens []Token) {
 			script = script[len(match):]
 		} else if match := operatorRegex.Find(script); match != nil {
 			tokens = append(tokens, Token{TOKEN_OPERATOR, string(match)})
+			script = script[len(match):]
+		} else if match := identifierRegex.Find(script); match != nil {
+			tokens = append(tokens, Token{TOKEN_IDENTIFIER, string(match)})
 			script = script[len(match):]
 		} else {
 			panic("Unknown token")

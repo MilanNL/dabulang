@@ -3,6 +3,7 @@ package main
 import "strconv"
 
 func parse(tokens []Token) (count int, nodes []Node) {
+	var prevNode Node
 	for i := 0; i < len(tokens); i++ {
 		token := tokens[i]
 
@@ -40,9 +41,11 @@ func parse(tokens []Token) (count int, nodes []Node) {
 					var elseBlock []Token
 					takeUntilEnd(tokens, &elseBlock, &i)
 					_, elseBlockNodes := parse(elseBlock)
-					nodes = append(nodes, IfNode{cond[0], ifBodyNodes, elseBlockNodes})
+					prevNode = IfNode{cond[0], ifBodyNodes, elseBlockNodes}
+					nodes = append(nodes, prevNode)
 				} else {
-					nodes = append(nodes, IfNode{cond[0], ifBodyNodes, nil})
+					prevNode = IfNode{cond[0], ifBodyNodes, nil}
+					nodes = append(nodes, prevNode)
 				}
 
 				count++
@@ -62,7 +65,8 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				takeUntilEnd(tokens, &bodyTokens, &i)
 				_, body := parse(bodyTokens)
 
-				nodes = append(nodes, FuncNode{name, params, body})
+				prevNode = FuncNode{name, params, body}
+				nodes = append(nodes, prevNode)
 				count++
 			case "For":
 				i += 2
@@ -94,7 +98,8 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				takeUntilEnd(tokens, &bodyTokens, &i)
 				_, body := parse(bodyTokens)
 
-				nodes = append(nodes, ForNode{init[0], cond[0], inc[0], body})
+				prevNode = ForNode{init[0], cond[0], inc[0], body}
+				nodes = append(nodes, prevNode)
 				count++
 			case "While":
 				i++
@@ -110,7 +115,8 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				takeUntilEnd(tokens, &bodyTokens, &i)
 				_, body := parse(bodyTokens)
 
-				nodes = append(nodes, WhileNode{cond[0], body})
+				prevNode = WhileNode{cond[0], body}
+				nodes = append(nodes, prevNode)
 				count++
 			case "Return":
 				i++
@@ -120,7 +126,8 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				}
 				i++
 				_, expression := parse(expressionTokens)
-				nodes = append(nodes, ReturnNode{expression[0]})
+				prevNode = ReturnNode{expression[0]}
+				nodes = append(nodes, prevNode)
 				count++
 			case "Fold":
 				i++ // eat keyword
@@ -134,12 +141,14 @@ func parse(tokens []Token) (count int, nodes []Node) {
 					fields = append(fields, tokens[i].value)
 					i++
 					if tokens[i].value == "," {
+						i++
 						continue
 					} else {
 						break
 					}
 				}
-				nodes = append(nodes, FoldNode{name, fields})
+				prevNode = FoldNode{name, fields}
+				nodes = append(nodes, prevNode)
 				count++
 			}
 		} else {
@@ -181,7 +190,8 @@ func parse(tokens []Token) (count int, nodes []Node) {
 								i++
 							}
 							_, RHS := parse(tokens[savedIndex+1 : i-minLevel])
-							nodes = append(nodes, BinopNode{o, LHS[0], RHS[0]})
+							prevNode = BinopNode{o, LHS[0], RHS[0]}
+							nodes = append(nodes, prevNode)
 							count++
 							break presendenceLoop
 						}
@@ -189,12 +199,12 @@ func parse(tokens []Token) (count int, nodes []Node) {
 					i = savedIndex
 					level = 0
 				}
-
 			} else {
 				// Single non-statement node
 				if tokens[i].tokenType == TOKEN_NUMBER {
-					number, _ := strconv.Atoi(tokens[i].value)
-					nodes = append(nodes, NumberNode{number})
+					number, _ := strconv.ParseFloat(tokens[i].value, 64)
+					prevNode = NumberNode{number}
+					nodes = append(nodes, prevNode)
 					count++
 					i++
 				} else if token.value == "[" {
@@ -211,9 +221,9 @@ func parse(tokens []Token) (count int, nodes []Node) {
 							}
 
 							if (tokens[i].value == "]" && level < 0) || (tokens[i].value == "," && level == 0) {
-								if tokens[i].value == "]" {
-									elementTokens = append(elementTokens, tokens[i])
-								}
+								// if tokens[i].value == "]" {
+								// 	elementTokens = append(elementTokens, tokens[i])
+								// }
 								break
 							}
 							elementTokens = append(elementTokens, tokens[i])
@@ -227,26 +237,26 @@ func parse(tokens []Token) (count int, nodes []Node) {
 						}
 						i++
 					}
-					nodes = append(nodes, ArrayNode{arrayContentNodes})
-					count = 1
-					return
-				} else if tokens[i].tokenType == TOKEN_STRINGLITERAL {
-					nodes = append(nodes, StringLiteralNode{tokens[i].value[1 : len(tokens[i].value)-1]})
+					prevNode = ArrayNode{arrayContentNodes}
+					nodes = append(nodes, prevNode)
 					count++
-				} else if len(tokens) > 1 && tokens[i].tokenType == TOKEN_IDENTIFIER && tokens[i+1].value == "(" {
+				} else if tokens[i].tokenType == TOKEN_STRINGLITERAL {
+					prevNode = StringLiteralNode{tokens[i].value[1 : len(tokens[i].value)-1]}
+					nodes = append(nodes, prevNode)
+					count++
+				} else if prevNode != nil && (prevNode.getType() == NODE_IDENTIFIER || prevNode.getType() == NODE_ARRAY || prevNode.getType() == NODE_STRINGLITERAL || prevNode.getType() == NODE_FUNCTIONCALL) && tokens[i].value == "(" {
 					// Function call
-					name := tokens[i].value
-					i += 2
+					name := prevNode
+					i++
 					var args []Node
 					level := 0
 					if tokens[i].value != ")" {
 						for {
 							var elementTokens []Token
 							for {
-								if tokens[i].value == "(" {
+								if tokens[i].value == "(" || tokens[i].value == "[" {
 									level++
-								}
-								if tokens[i].value == ")" {
+								} else if tokens[i].value == ")" || tokens[i].value == "]" {
 									level--
 								}
 
@@ -266,18 +276,19 @@ func parse(tokens []Token) (count int, nodes []Node) {
 							}
 							i++
 						}
-						nodes = append(nodes, FunctionCallNode{name, args})
+						prevNode = FunctionCallNode{name, args}
+						nodes[len(nodes)-1] = prevNode
 						count++
 					} else {
-						nodes = append(nodes, FunctionCallNode{name, nil})
+						prevNode = FunctionCallNode{name, nil}
+						nodes[len(nodes)-1] = prevNode
 						count++
 					}
 				} else if tokens[i].tokenType == TOKEN_IDENTIFIER {
-					nodes = append(nodes, IdentifierNode{tokens[i].value})
+					prevNode = IdentifierNode{tokens[i].value}
+					nodes = append(nodes, prevNode)
 					count++
-					i++
 				}
-
 			}
 		}
 	}

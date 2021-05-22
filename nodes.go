@@ -89,14 +89,14 @@ func (n IdentifierNode) String() string {
 }
 
 type NumberNode struct {
-	value int
+	value float64
 }
 
 func (n NumberNode) getType() int {
 	return NODE_NUMBER
 }
 func (n NumberNode) String() string {
-	return fmt.Sprintf("Number node: {\n value: %d\n}\n", n.value)
+	return fmt.Sprintf("%f", n.value)
 }
 
 type ForNode struct {
@@ -137,7 +137,7 @@ func (n ArrayNode) String() string {
 }
 
 type FunctionCallNode struct {
-	name string
+	name Node
 	args []Node
 }
 
@@ -145,7 +145,7 @@ func (n FunctionCallNode) getType() int {
 	return NODE_FUNCTIONCALL
 }
 func (n FunctionCallNode) String() string {
-	return n.name
+	return "Function"
 }
 
 type StringLiteralNode struct {

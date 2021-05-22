@@ -1,6 +1,8 @@
 package main
 
-import "io/ioutil"
+import (
+	"io/ioutil"
+)
 
 func main() {
 	script, err := ioutil.ReadFile("./test.dabu")
