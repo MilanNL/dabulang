@@ -64,19 +64,6 @@ func parse(tokens []Token) (count int, nodes []Node) {
 
 				nodes = append(nodes, FuncNode{name, params, body})
 				count++
-			case "Prop":
-				i++
-				var names []string
-				if tokens[i+1].value == "," {
-					for ; tokens[i+1].value == ","; i += 2 {
-						names = append(names, tokens[i].value)
-					}
-					names = append(names, tokens[i].value)
-				} else {
-					names = append(names, tokens[i].value)
-				}
-				nodes = append(nodes, PropNode{names})
-				count++
 			case "For":
 				i += 2
 
@@ -125,27 +112,6 @@ func parse(tokens []Token) (count int, nodes []Node) {
 
 				nodes = append(nodes, WhileNode{cond[0], body})
 				count++
-			case "Class", "Singleton":
-				isSingleton := tokens[i].value == "Singleton"
-				i++
-				name := tokens[i].value
-				var extends []string
-				if i++; tokens[i].value == "Extends" {
-					i++
-					if tokens[i+1].value == "," {
-						for ; tokens[i+1].value == ","; i += 2 {
-							extends = append(extends, tokens[i].value)
-						}
-					} else {
-						extends = append(extends, tokens[i].value)
-						i++
-					}
-				}
-				var bodyTokens []Token
-				takeUntilEnd(tokens, &bodyTokens, &i)
-				_, body := parse(bodyTokens)
-				nodes = append(nodes, ClassNode{isSingleton, name, extends, body})
-				count++
 			case "Return":
 				i++
 				var expressionTokens []Token
@@ -155,6 +121,25 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				i++
 				_, expression := parse(expressionTokens)
 				nodes = append(nodes, ReturnNode{expression[0]})
+				count++
+			case "Fold":
+				i++ // eat keyword
+				name := tokens[i].value
+				i++
+				var fields []string
+				for {
+					if tokens[i].value == "End" {
+						break
+					}
+					fields = append(fields, tokens[i].value)
+					i++
+					if tokens[i].value == "," {
+						continue
+					} else {
+						break
+					}
+				}
+				nodes = append(nodes, FoldNode{name, fields})
 				count++
 			}
 		} else {
@@ -246,7 +231,7 @@ func parse(tokens []Token) (count int, nodes []Node) {
 					count = 1
 					return
 				} else if tokens[i].tokenType == TOKEN_STRINGLITERAL {
-					nodes = append(nodes, StringLiteralNode{tokens[i].value})
+					nodes = append(nodes, StringLiteralNode{tokens[i].value[1 : len(tokens[i].value)-1]})
 					count++
 				} else if len(tokens) > 1 && tokens[i].tokenType == TOKEN_IDENTIFIER && tokens[i+1].value == "(" {
 					// Function call
@@ -317,7 +302,7 @@ func takeUntilEnd(tokens []Token, output *[]Token, i *int) {
 }
 
 var operators = [...]string{"=", "||", "&&", "|", "&", "^", "==", "!=", ">", ">=", "<", "<=", "<<", ">>", "+", "-", "*", "/", "!", "~", "."}
-var keywords = [...]string{"If", "While", "Class", "End", "Singleton", "For", "Func", "Return", "Else", "Extends", "Prop"}
+var keywords = [...]string{"If", "While", "End", "For", "Func", "Return", "Else", "Fold"}
 
 func isKeyword(identifier string) bool {
 	for _, k := range keywords {

@@ -7,8 +7,6 @@ import (
 const (
 	NODE_IF            = iota
 	NODE_FUNC          = iota
-	NODE_PROP          = iota
-	NODE_CLASS         = iota
 	NODE_RETURN        = iota
 	NODE_BINOP         = iota
 	NODE_IDENTIFIER    = iota
@@ -18,6 +16,7 @@ const (
 	NODE_ARRAY         = iota
 	NODE_FUNCTIONCALL  = iota
 	NODE_STRINGLITERAL = iota
+	NODE_FOLD          = iota
 )
 
 type Node interface {
@@ -52,32 +51,6 @@ func (n FuncNode) getType() int {
 
 func (n FuncNode) String() string {
 	return fmt.Sprintf("Function node: {\n name: %s,\n params: %s\n body: %s\n}\n", n.name, n.params, n.body)
-}
-
-type PropNode struct {
-	names []string
-}
-
-func (n PropNode) getType() int {
-	return NODE_PROP
-}
-
-func (n PropNode) String() string {
-	return fmt.Sprintf("Prop node: {\n names: %s\n}\n", n.names)
-}
-
-type ClassNode struct {
-	isSingleton bool
-	name        string
-	extends     []string
-	body        []Node
-}
-
-func (n ClassNode) getType() int {
-	return NODE_CLASS
-}
-func (n ClassNode) String() string {
-	return fmt.Sprintf("Class node: {\n singleton: %t,\n name: %s,\n extends: %s\n body: %s\n}\n", n.isSingleton, n.name, n.extends, n.body)
 }
 
 type ReturnNode struct {
@@ -184,4 +157,16 @@ func (n StringLiteralNode) getType() int {
 }
 func (n StringLiteralNode) String() string {
 	return n.literal
+}
+
+type FoldNode struct {
+	name   string
+	fields []string
+}
+
+func (n FoldNode) getType() int {
+	return NODE_FOLD
+}
+func (n FoldNode) String() string {
+	return fmt.Sprintf("%v", n.fields)
 }

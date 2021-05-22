@@ -1,11 +1,17 @@
-Func min(a, b)
-  If a < b Then
-    Return a;
-  Else
-    Return b;
-  End
+Fold Person
+  name, age
 End
 
-a = 10;
-b = 20;
-print(min(a, b));
+Func greet(p)
+  print("Hello, ");
+  println(p(name));
+End
+
+john = Person("John", 35);
+mary = Person("Mary", 33);
+
+people = [john, mary];
+
+For (i = 0; i < len(people); i = i + 1)
+  greet(people(i));
+End

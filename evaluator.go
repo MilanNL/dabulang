@@ -5,18 +5,19 @@ type Scope struct {
 	variables map[string]interface{}
 }
 
-func (s Scope) addToScope(name string, value interface{}) {
+func (s *Scope) addToScope(name string, value interface{}) {
 	s.variables[name] = value
 }
 
-func (s Scope) getFromScope(name string) interface{} {
-	b := &s
-	for {
-		if val, found := (*b).variables[name]; found {
-			return val
-		}
-		b = s.parent
-	}
+func (s *Scope) getFromScope(name string) interface{} {
+	// b := &s
+	// for {
+	// 	if val, found := (*b).variables[name]; found {
+	// 		return val
+	// 	}
+	// 	b = s.parent
+	// }
+	return s.variables[name]
 }
 
 func createScope(parent *Scope) Scope {
@@ -29,6 +30,8 @@ type Function struct {
 	params []string
 	body   []Node
 }
+
+type Fold map[string]interface{}
 
 var exit_function = false
 var return_value interface{}
@@ -205,11 +208,8 @@ func (n BinopNode) evaluate(scope *Scope) (r interface{}) {
 		}
 	case "=":
 		RHS := n.RHS.evaluate(scope)
-		_, RHSok := RHS.(int)
-		if RHSok {
-			scope.addToScope(n.LHS.String(), RHS)
-			r = RHS
-		}
+		scope.addToScope(n.LHS.String(), RHS)
+		r = RHS
 	}
 	return
 }
@@ -218,18 +218,14 @@ func (n FuncNode) evaluate(scope *Scope) interface{} {
 	scope.addToScope(n.name, Function{n.params, n.body})
 	return nil
 }
-func (n ClassNode) evaluate(_ *Scope) interface{} {
-	return 0
-}
+
 func (n NumberNode) evaluate(_ *Scope) interface{} {
 	return n.value
 }
 func (n StringLiteralNode) evaluate(_ *Scope) interface{} {
 	return n.literal
 }
-func (n PropNode) evaluate(_ *Scope) interface{} {
-	return 0
-}
+
 func (n IfNode) evaluate(scope *Scope) interface{} {
 	if n.condition.evaluate(scope).(int) != 0 {
 		for _, b := range n.ifbody {
@@ -250,6 +246,7 @@ func (n IfNode) evaluate(scope *Scope) interface{} {
 	}
 	return nil
 }
+
 func (n ForNode) evaluate(scope *Scope) interface{} {
 	n.init.evaluate(scope)
 	for {
@@ -268,6 +265,7 @@ func (n ForNode) evaluate(scope *Scope) interface{} {
 	}
 	return nil
 }
+
 func (n WhileNode) evaluate(scope *Scope) interface{} {
 	for {
 		if n.cond.evaluate(scope).(int) == 0 {
@@ -282,6 +280,7 @@ func (n WhileNode) evaluate(scope *Scope) interface{} {
 	}
 	return nil
 }
+
 func (n ReturnNode) evaluate(scope *Scope) interface{} {
 	exit_function = true
 	if n.expression != nil {
@@ -291,30 +290,54 @@ func (n ReturnNode) evaluate(scope *Scope) interface{} {
 	}
 	return nil
 }
-func (n ArrayNode) evaluate(_ *Scope) interface{} {
-	return 0
+
+func (n ArrayNode) evaluate(scope *Scope) interface{} {
+	var array []interface{}
+	for _, e := range n.items {
+		array = append(array, e.evaluate(scope))
+	}
+	return array
 }
+
 func (n FunctionCallNode) evaluate(scope *Scope) interface{} {
 	if isIntrinsic(n.name) {
 		return handleIntrinsic(n, scope)
 	} else {
 		function := scope.getFromScope(n.name)
 
-		newScope := createScope(scope)
-		for i, a := range function.(Function).params {
-			newScope.addToScope(a, n.args[i].evaluate(scope))
-		}
-		for _, b := range function.(Function).body {
-			b.evaluate(&newScope)
-			if exit_function {
-				exit_function = false
-				return return_value
+		if _, isFunc := function.(Function); isFunc {
+			newScope := createScope(scope)
+			for i, a := range function.(Function).params {
+				newScope.addToScope(a, n.args[i].evaluate(scope))
 			}
+			for _, b := range function.(Function).body {
+				b.evaluate(&newScope)
+				if exit_function {
+					exit_function = false
+					return return_value
+				}
+			}
+			return nil
+		} else if _, isFoldNode := function.(FoldNode); isFoldNode {
+			foldInst := make(Fold)
+			for i, arg := range n.args {
+				foldInst[function.(FoldNode).fields[i]] = arg
+			}
+			return foldInst
+		} else if _, isFold := function.(Fold); isFold {
+			return function.(Fold)[n.args[0].String()]
+		} else if _, isArray := function.([]interface{}); isArray {
+			return function.([]interface{})[n.args[0].evaluate(scope).(int)]
 		}
-		return nil
 	}
+	return nil
 }
 
 func (n IdentifierNode) evaluate(scope *Scope) interface{} {
 	return scope.getFromScope(n.name)
+}
+
+func (n FoldNode) evaluate(scope *Scope) interface{} {
+	scope.addToScope(n.name, n)
+	return nil
 }

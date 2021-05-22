@@ -11,23 +11,21 @@ In addition to TI-BASIC, Dabulang has classes, functions, singletons and a synta
 ## Impression
 
 ```Dabulang
-Singleton Player Extends Sprite
-  Prop name, age;
-
-  Func init()
-    Super(10, 10, "player.png");
-  End
-
-  Func hello(a, b)
-    If a == b Then
-      matrix = [[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]];
-      element = G(0, 2, 0);
-      Return element;
-    Else
-      Return 10;
-    End
-  End
+Fold Person
+  name, age
 End
 
-Player.hello(20, Player.name);
+Func greet(p)
+  print("Hello, ");
+  println(p(name));
+End
+
+john = Person("John", 35);
+mary = Person("Mary", 33);
+
+people = [john, mary];
+
+For (i = 0; i < len(people); i = i + 1)
+  greet(people(i));
+End
 ```
