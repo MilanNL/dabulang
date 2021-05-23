@@ -7,7 +7,7 @@ import (
 
 func lex(script []byte) (tokens []Token) {
 	numberRegex := regexp.MustCompile(`^[-]{0,1}[0-9.]+`)
-	identifierRegex := regexp.MustCompile(`^[\D][^ ()[\]"=!></\*&\|\^~,;\n]*`)
+	identifierRegex := regexp.MustCompile(`^[\D][^ ()[\]"=!></\*&\|\^~,;\n\r]*`)
 	bracketRegex := regexp.MustCompile(`^[()\[\]{}]`)
 	stringLiteralRegex := regexp.MustCompile(`(?ms)^".*?"`)
 	separatorRegex := regexp.MustCompile(`^[,;]`)
