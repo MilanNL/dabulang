@@ -35,16 +35,23 @@ type Fold map[string]interface{}
 
 var exit_function = false
 var return_value interface{}
+var assign_value interface{}
 
 func (n BinopNode) evaluate(scope *Scope) (r interface{}) {
 	switch n.binopType {
 	case "+":
 		LHS := n.LHS.evaluate(scope)
 		RHS := n.RHS.evaluate(scope)
+		if _, LHSisInt := LHS.(int); LHSisInt {
+			LHS = float64(LHS.(int))
+		}
+		if _, RHSisInt := RHS.(int); RHSisInt {
+			RHS = float64(RHS.(int))
+		}
 		_, LHSok := LHS.(float64)
 		_, RHSok := RHS.(float64)
 		if LHSok && RHSok {
-			r = n.LHS.evaluate(scope).(float64) + n.RHS.evaluate(scope).(float64)
+			r = LHS.(float64) + RHS.(float64)
 		}
 	case "-":
 		LHS := n.LHS.evaluate(scope)
@@ -211,7 +218,10 @@ func (n BinopNode) evaluate(scope *Scope) (r interface{}) {
 		}
 	case "=":
 		RHS := n.RHS.evaluate(scope)
-		scope.addToScope(n.LHS.String(), RHS)
+		assign_value = RHS
+		n.LHS.evaluate(scope)
+		// scope.addToScope(n.LHS.String(), RHS)
+		assign_value = nil
 		r = RHS
 	}
 	return
@@ -303,18 +313,73 @@ func (n ArrayNode) evaluate(scope *Scope) interface{} {
 }
 
 func (n FunctionCallNode) evaluate(scope *Scope) interface{} {
-	if n.name.getType() == NODE_IDENTIFIER {
-		if isIntrinsic(n.name.String()) {
-			return handleIntrinsic(n, scope)
-		} else {
-			function := scope.getFromScope(n.name.String())
+	if assign_value != nil {
+		if n.name.getType() == NODE_IDENTIFIER {
+			vartype := scope.getFromScope(n.name.String())
+			if array, isArray := vartype.([]interface{}); isArray {
+				saved_assign_value := assign_value
+				assign_value = nil
+				array[int(n.args[0].evaluate(scope).(float64))] = saved_assign_value
+				scope.addToScope(n.name.String(), array)
+			} else if str, isString := vartype.(string); isString {
+				out := []rune(str)
+				saved_assign_value := assign_value
+				assign_value = nil
+				index := int(n.args[0].evaluate(scope).(float64))
+				out[index] = rune(saved_assign_value.(string)[0])
+				scope.addToScope(n.name.String(), string(out))
+			}
+		}
+	} else {
+		if n.name.getType() == NODE_IDENTIFIER {
+			if isIntrinsic(n.name.String()) {
+				return handleIntrinsic(n, scope)
+			} else {
+				function := scope.getFromScope(n.name.String())
 
-			if _, isFunc := function.(Function); isFunc {
+				if _, isFunc := function.(Function); isFunc {
+					newScope := createScope(scope)
+					for i, a := range function.(Function).params {
+						newScope.addToScope(a, n.args[i].evaluate(scope))
+					}
+					for _, b := range function.(Function).body {
+						b.evaluate(&newScope)
+						if exit_function {
+							exit_function = false
+							return return_value
+						}
+					}
+					return nil
+				} else if _, isFoldNode := function.(FoldNode); isFoldNode {
+					foldInst := make(Fold)
+					for i, arg := range n.args {
+						foldInst[function.(FoldNode).fields[i]] = arg.evaluate(scope)
+					}
+					return foldInst
+				} else if _, isFold := function.(Fold); isFold {
+					return function.(Fold)[n.args[0].String()]
+				} else if _, isArray := function.([]interface{}); isArray {
+					return function.([]interface{})[int(n.args[0].evaluate(scope).(float64))]
+				} else if _, isString := function.(string); isString {
+					return string(function.(string)[int(n.args[0].evaluate(scope).(float64))])
+				}
+			}
+		} else if n.name.getType() == NODE_STRINGLITERAL {
+			return string(n.name.evaluate(scope).(string)[int(n.args[0].evaluate(scope).(float64))])
+		} else if n.name.getType() == NODE_ARRAY {
+			return n.name.evaluate(scope).([]interface{})[int(n.args[0].evaluate(scope).(float64))]
+		} else if n.name.getType() == NODE_FUNCTIONCALL {
+			result := n.name.evaluate(scope)
+			if _, isString := result.(string); isString {
+				return string(result.(string)[int(n.args[0].evaluate(scope).(float64))])
+			} else if _, isArray := result.(string); isArray {
+				return result.([]interface{})[int(n.args[0].evaluate(scope).(float64))]
+			} else if _, isFunc := result.(Function); isFunc {
 				newScope := createScope(scope)
-				for i, a := range function.(Function).params {
+				for i, a := range result.(Function).params {
 					newScope.addToScope(a, n.args[i].evaluate(scope))
 				}
-				for _, b := range function.(Function).body {
+				for _, b := range result.(Function).body {
 					b.evaluate(&newScope)
 					if exit_function {
 						exit_function = false
@@ -322,53 +387,22 @@ func (n FunctionCallNode) evaluate(scope *Scope) interface{} {
 					}
 				}
 				return nil
-			} else if _, isFoldNode := function.(FoldNode); isFoldNode {
-				foldInst := make(Fold)
-				for i, arg := range n.args {
-					foldInst[function.(FoldNode).fields[i]] = arg.evaluate(scope)
-				}
-				return foldInst
-			} else if _, isFold := function.(Fold); isFold {
-				return function.(Fold)[n.args[0].String()]
-			} else if _, isArray := function.([]interface{}); isArray {
-				return function.([]interface{})[int(n.args[0].evaluate(scope).(float64))]
-			} else if _, isString := function.(string); isString {
-				return string(function.(string)[int(n.args[0].evaluate(scope).(float64))])
+			} else if _, isFold := result.(Fold); isFold {
+				return result.(Fold)[n.args[0].String()]
 			}
+			return result
 		}
-	} else if n.name.getType() == NODE_STRINGLITERAL {
-		return string(n.name.evaluate(scope).(string)[int(n.args[0].evaluate(scope).(float64))])
-	} else if n.name.getType() == NODE_ARRAY {
-		return n.name.evaluate(scope).([]interface{})[int(n.args[0].evaluate(scope).(float64))]
-	} else if n.name.getType() == NODE_FUNCTIONCALL {
-		result := n.name.evaluate(scope)
-		if _, isString := result.(string); isString {
-			return string(result.(string)[int(n.args[0].evaluate(scope).(float64))])
-		} else if _, isArray := result.(string); isArray {
-			return result.([]interface{})[int(n.args[0].evaluate(scope).(float64))]
-		} else if _, isFunc := result.(Function); isFunc {
-			newScope := createScope(scope)
-			for i, a := range result.(Function).params {
-				newScope.addToScope(a, n.args[i].evaluate(scope))
-			}
-			for _, b := range result.(Function).body {
-				b.evaluate(&newScope)
-				if exit_function {
-					exit_function = false
-					return return_value
-				}
-			}
-			return nil
-		} else if _, isFold := result.(Fold); isFold {
-			return result.(Fold)[n.args[0].String()]
-		}
-		return result
 	}
 	return nil
 }
 
 func (n IdentifierNode) evaluate(scope *Scope) interface{} {
-	return scope.getFromScope(n.name)
+	if assign_value != nil {
+		scope.addToScope(n.name, assign_value)
+		return nil
+	} else {
+		return scope.getFromScope(n.name)
+	}
 }
 
 func (n FoldNode) evaluate(scope *Scope) interface{} {

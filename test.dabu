@@ -1,3 +1,18 @@
-s = string(len("Hello"));
+Func strcat(a, b)
+  out = string(len(a) + len(b));
+  For(i = 0; i < len(a); i = i + 1)
+    out(i) = a(i);
+  End
+  For (j = 0; j < len(b); j = j + 1)
+    out(i) = b(j);
+    i = i + 1;
+  End
 
-print(s);
+  Return out;
+End
+
+s1 = "Hello, ";
+s2 = "world!";
+
+s3 = strcat(s1, s2);
+println(s3);

@@ -172,7 +172,7 @@ func parse(tokens []Token) (count int, nodes []Node) {
 				}
 			}
 			i = savedIndex
-			if hasOperator {
+			if hasOperator && (minLevel < 1 || (tokens[i].value == "(" && (prevNode == nil || (prevNode.getType() != NODE_IDENTIFIER && prevNode.getType() != NODE_ARRAY && prevNode.getType() != NODE_STRINGLITERAL && prevNode.getType() == NODE_FUNCTIONCALL)))) {
 				// Resolve expression
 				savedIndex := i
 				level := 0
